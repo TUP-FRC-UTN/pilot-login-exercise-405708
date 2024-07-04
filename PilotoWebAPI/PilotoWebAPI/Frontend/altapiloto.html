@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <title>Alta</title>
+    <style>body{background-color: burlywood;}</style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Alta de Pilotos</h2>
+        <form id="formulario">
+            <div class="row mt-3 mb-3">
+              <div class="col-lg-12">
+                <label for="nombre" class="form-label">Nombre</label>
+                <input type="text" class="form-control" id="nombre" name="Nombre">
+              </div>
+            </div>
+            <div class="row mt-3 mb-3">
+              <div class="col-lg-12">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" name="Email" readonly disabled>
+              </div>
+            </div>
+            <div class="row mt-3 mb-3">
+              <div class="col-lg-12">
+                <label for="horasVuelo" class="form-label">Cant. horas vuelo</label>
+                <input type="text" class="form-control" id="horasVuelo" name="Cant_hrs_vuelo">
+              </div>
+            </div>
+            <div class="row mt-3 mb-3">
+              <div class="col-12">
+                <label for="nacionalidad" class="form-label">Nacionalidad</label>
+                <select class="form-select" aria-label="Default select example" id="nacionalidad" name="idPais">
+                  <option disabled selected>Seleccionar</option>
+                </select>
+              </div>
+            </div>
+            <div class="row mt-3 mb-3">
+              <div class="col-12 d-grid">
+                <button type="submit" class="btn btn-primary" id="submit">Registrar</button>
+              </div>
+            </div>
+          </form>
+          <div class="row mt-3 mb-3">
+            <div class="col-12 d-grid">
+              <button type="button" class="btn btn-primary" id="btnModificarPilotos" onclick="modificarPilotos()">Modificar</button>
+            </div>
+          </div>
+          <div class="row text-center text-primary mt-3 mb-3">
+            <div class="col-12">
+              <a href="Login.html" class="text-decoration-none">Volver</a>
+            </div>
+          </div>
+        </div>
+    </div>
+
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        $(document).ready(function () {
+          // Función para obtener parámetros del query string
+          function getQueryStringValue(key) {
+            return new URLSearchParams(window.location.search).get(key);
+          }
+    
+          // Obtener el email del query string y asignarlo al campo #email
+          var emailFromQueryString = getQueryStringValue('email');
+          $('#email').val(emailFromQueryString);
+    
+          // Cargar países
+          cargarPaises();
+    
+          // Validación de formulario
+          $("#formulario").validate({
+            errorElement: 'div',
+            errorClass: 'is-invalid',
+            validClass: 'is-valid',
+            rules: {
+              Nombre: {
+                required: true,
+                maxlength: 100
+              },
+              Cant_hrs_vuelo: {
+                required: true,
+                number: true
+              },
+              idPais: {
+                required: true
+              }
+            },
+            messages: {
+              Nombre: {
+                required: "Por favor, ingresa tu nombre",
+                maxlength: "El nombre debe tener menos de 100 caracteres"
+              },
+              Cant_hrs_vuelo: {
+                required: "Por favor, ingresa la cantidad de horas de vuelo",
+                number: "Por favor, ingresa un número válido"
+              },
+              idPais: {
+                required: "Por favor, selecciona una nacionalidad"
+              }
+            },
+            errorPlacement: function (error, element) {
+              var errorId = 'error-' + element.attr('id');
+              error.appendTo($('#' + errorId));
+            },
+            submitHandler: function (form) {
+              var nombre = $("#nombre").val();
+              var horasVuelo = $("#horasVuelo").val();
+              var idPais = $("#nacionalidad").val();
+              var email = $("#email").val(); // Obtener el email del input oculto
+    
+              var nuevoPiloto = {
+                Nombre: nombre,
+                Cant_hrs_vuelo: horasVuelo,
+                idPais: idPais,
+                Email: email // Incluir el email en el objeto a enviar
+              };
+    
+              altaPiloto(nuevoPiloto)
+                .then(function (response) {
+                  console.log('Respuesta del servidor:', response);
+                  mostrarRegistroExitoso(emailFromQueryString);
+                })
+                .catch(function (error) {
+                  console.error('Error al registrar piloto:', error);
+                  Swal.fire('Ocurrió un error al intentar registrar el piloto. Por favor, inténtalo de nuevo.', '', 'error');
+                });
+            }
+          });
+    
+          // Función para cargar países
+          function cargarPaises() {
+            fetch('https://localhost:7285/GetPaises')
+              .then(response => response.json())
+              .then(data => {
+                if (data && data.data && Array.isArray(data.data)) {
+                  mostrarPaises(data.data);
+                } else {
+                  console.error('La respuesta del servidor no contiene un array válido de países:', data);
+                }
+              })
+              .catch(error => console.error('Error al obtener países:', error));
+          }
+    
+          // Función para mostrar países en el select
+          function mostrarPaises(paises) {
+            var selectNacionalidad = $('#nacionalidad');
+            paises.forEach(function (pais) {
+              var option = $('<option></option>');
+              option.attr('value', pais.idPais);
+              option.text(pais.nombrePais);
+              selectNacionalidad.append(option);
+            });
+          }
+    
+          // Función para enviar alta de piloto
+          function altaPiloto(data) {
+            return fetch('https://localhost:7285/Piloto/PostPiloto', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(data)
+            })
+              .then(response => response.json());
+          }
+    
+          // Función para mostrar mensaje de registro exitoso
+          function mostrarRegistroExitoso(email) {
+            if (typeof Swal !== 'undefined') {
+              Swal.fire(`Piloto registrado correctamente. Email: ${email}`, "", "success");
+            } else {
+              console.log("SweetAlert no está definido. No se puede mostrar la notificación.");
+            }
+    
+            // Resetear solo los campos del formulario excepto el campo de email
+            $('#formulario').find(':input').not('#email').val('');
+            $('#formulario').find('.is-invalid').removeClass('is-invalid');
+            $('#formulario').find('.is-valid').removeClass('is-valid');
+          }
+        });
+         function modificarPilotos() {
+          var email = $('#email').val(); // Obtener el email del campo de email en el formulario
+          window.location.href = 'pilotos.html?email=' + encodeURIComponent(email);
+          }
+      </script>
+</body>
+</html>
